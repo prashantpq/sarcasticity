@@ -1,34 +1,31 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
 from transformers import pipeline
-import uvicorn
 
-# Initialize FastAPI app
-app = FastAPI(
-    title="Sarcasm Detection API",
-    description="Detect whether a sentence is sarcastic or not using a BERT model.",
-    version="1.0"
-)
+# Load pretrained sarcasm detection model (RoBERTa base fine-tuned)
+classifier = pipeline("text-classification", model="mrm8488/bert-tiny-finetuned-sarcasm")
 
-# Load sarcasm model once
-sarcasm_model = pipeline("text-classification", model="manishiitg/sarcasm-detector-bert")
+# FastAPI app
+app = FastAPI(title="Sarcasm Detection API")
 
-# Define request model
-class InputText(BaseModel):
+# Input model
+class TextInput(BaseModel):
     sentence: str
 
-# API endpoint
+# Routes
+@app.get("/")
+async def root():
+    return {"message": "Sarcasm Detection API is running!"}
+
 @app.post("/predict")
-async def predict(input_text: InputText):
-    sentence = input_text.sentence
-    prediction = sarcasm_model(sentence)[0]
-    label = "Sarcastic" if prediction['label'] == 'LABEL_1' else "Not Sarcastic"
-    confidence = round(prediction['score'], 4)
+async def predict(input: TextInput):
+    result = classifier(input.sentence)[0]
+    label = result["label"]  # 'LABEL_1' for sarcastic, 'LABEL_0' for not
+    score = round(result["score"], 4)
+    is_sarcastic = "Yes" if label == "LABEL_1" else "No"
     
     return {
-        "sentence": sentence,
-        "prediction": label,
-        "confidence": confidence
+        "sentence": input.sentence,
+        "sarcastic": is_sarcastic,
+        "confidence": score
     }
-
-# Run using: uvicorn app:app --reload
