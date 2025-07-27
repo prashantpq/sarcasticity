@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sarcasm Detector</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #83a4d4, #b6fbff);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      text-align: center;
+      width: 100%;
+      max-width: 500px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    textarea {
+      width: 100%;
+      height: 100px;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      resize: none;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    .result {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Sarcasm Detection</h1>
+    <textarea id="textInput" placeholder="Enter your sentence..."></textarea><br/>
+    <button onclick="detectSarcasm()">Detect</button>
+    <div class="result" id="resultArea"></div>
+  </div>
+
+  <script>
+    async function detectSarcasm() {
+      const text = document.getElementById("textInput").value;
+      const resultArea = document.getElementById("resultArea");
+
+      if (!text.trim()) {
+        resultArea.innerText = "Please enter some text.";
+        return;
+      }
+
+      resultArea.innerText = "Detecting...";
+
+      try {
+        const response = await fetch("/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          resultArea.innerHTML = `
+            Prediction: <strong>${data.prediction}</strong><br/>
+            Confidence: ${data.confidence}
+          `;
+        } else {
+          resultArea.innerText = data.detail || "Error occurred.";
+        }
+      } catch (err) {
+        resultArea.innerText = "Server error.";
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,17 +1,20 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from transformers import pipeline
+
+app = FastAPI()
+templates = Jinja2Templates(directory="templates")
+
+sarcasm_classifier = pipeline("text-classification", model="nikesh66/Sarcasm-Detection-using-BERT")
 
 class TextInput(BaseModel):
     text: str
 
-app = FastAPI()
-
-sarcasm_classifier = pipeline("text-classification", model="helinivan/english-sarcasm-detector")
-
-@app.get("/")
-async def root():
-    return {"message": "Sarcasm detection API is running"}
+@app.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 @app.post("/predict")
 async def predict(input: TextInput):
@@ -19,25 +22,23 @@ async def predict(input: TextInput):
     if not text:
         raise HTTPException(status_code=400, detail='Please provide input text.')
 
-    result = sarcasm_classifier(text)[0]  
+    result = sarcasm_classifier(text)[0]
     label = result["label"]
     confidence = round(result["score"], 4)
 
     label_map = {
-    "LABEL_0": "sarcastic 😏",
-    "LABEL_1": "not sarcastic 😊",
-    "sarcastic": "sarcastic 😏",
-    "not_sarcastic": "not sarcastic 😊",
-    "POSITIVE": "sarcastic 😏",
-    "NEGATIVE": "not sarcastic 😊"
+        "0": "Not Sarcasm 😊",
+        "1": "Sarcasm 🙄",
+        "Not Sarcasm": "Not Sarcasm 😊",
+        "Sarcasm": "Sarcasm 🙄",
+        "LABEL_0": "Not Sarcasm 😊",
+        "LABEL_1": "Sarcasm 🙄"
     }
 
-
-    readable_label = label_map.get(label, label.lower())
+    readable_label = label_map.get(label, label)
 
     return {
-    "prediction": readable_label,
-    "confidence": confidence,
-    "raw_label": label  
-     }
-
+        "prediction": readable_label,
+        "confidence": confidence,
+        "raw_label": label
+    }
